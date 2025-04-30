@@ -13,19 +13,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get invoice by ID
-router.get('/:id', async (req, res) => {
+// Get invoices for a specific organization - Placing this BEFORE the /:id route to avoid conflicts
+router.get('/organization/:orgId', async (req, res) => {
   try {
-    const { id } = req.params;
-    const result = await db.query('SELECT * FROM invoices WHERE id = $1', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-    
-    res.json(result.rows[0]);
+    const { orgId } = req.params;
+    const result = await db.query('SELECT * FROM invoices WHERE organization_id = $1 ORDER BY created_at DESC', [orgId]);
+    res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching invoice:', error);
+    console.error('Error fetching organization invoices:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -70,6 +65,55 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'An invoice with this number already exists for this organization' });
     }
     
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update invoice status only
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+    
+    // Validate status value
+    const validStatuses = ['Draft', 'Sent', 'Pending', 'Paid', 'Overdue'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
+    
+    const result = await db.query(
+      'UPDATE invoices SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [status, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating invoice status:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get invoice by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('SELECT * FROM invoices WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching invoice:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -123,18 +167,6 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
     console.error('Error deleting invoice:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get invoices for a specific organization
-router.get('/organization/:orgId', async (req, res) => {
-  try {
-    const { orgId } = req.params;
-    const result = await db.query('SELECT * FROM invoices WHERE organization_id = $1 ORDER BY created_at DESC', [orgId]);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching organization invoices:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
