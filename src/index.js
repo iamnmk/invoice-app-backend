@@ -27,6 +27,7 @@ const userRoutes = require('./routes/users');
 const organizationRoutes = require('./routes/organizations');
 const invoiceRoutes = require('./routes/invoices');
 const dashboardRoutes = require('./routes/dashboard');
+const servicesRoutes = require('./routes/services');
 
 // Public routes
 app.get('/', (req, res) => {
@@ -40,6 +41,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/organizations', authenticateUser, organizationRoutes);
 app.use('/api/invoices', authenticateUser, invoiceRoutes);
 app.use('/api/dashboard', authenticateUser, dashboardRoutes);
+app.use('/api/services', authenticateUser, servicesRoutes);
 
 // Start server
 app.listen(port, () => {
