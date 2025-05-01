@@ -8,7 +8,7 @@ const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for PDF data
 
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
@@ -18,6 +18,10 @@ pool.query('SELECT NOW()', (err, res) => {
     console.log('Database connected successfully:', res.rows[0]);
   }
 });
+
+// Initialize email service
+const { sendInvoiceEmail } = require('./utils/email');
+console.log('Email service initialized with Mailtrap');
 
 // Import middleware
 const { authenticateUser, requireAdmin, requireOrganizationAccess } = require('./middleware/auth');

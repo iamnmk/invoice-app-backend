@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { sendInvoiceEmail } = require('../utils/email');
 
 // Get all invoices
 router.get('/', async (req, res) => {
@@ -167,6 +168,65 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
     console.error('Error deleting invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send invoice via email
+router.post('/:id/send-email', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pdfBuffer, message } = req.body;
+    
+    if (!pdfBuffer) {
+      return res.status(400).json({ error: 'PDF data is required' });
+    }
+    
+    // Get invoice details
+    const invoiceResult = await db.query('SELECT * FROM invoices WHERE id = $1', [id]);
+    
+    if (invoiceResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    const invoice = invoiceResult.rows[0];
+    const pdfFilename = `Invoice-${invoice.invoice_number}.pdf`;
+    const emailSubject = `Invoice #${invoice.invoice_number}`;
+    const emailText = message || `Please find attached your invoice #${invoice.invoice_number} for ${invoice.amount_total} ${invoice.currency}.`;
+    
+    // Send email
+    const emailResult = await sendInvoiceEmail(
+      invoice.client_email,
+      emailSubject,
+      emailText,
+      Buffer.from(pdfBuffer, 'base64'),
+      pdfFilename
+    );
+    
+    if (!emailResult.success) {
+      return res.status(500).json({ error: 'Failed to send email', details: emailResult.error });
+    }
+    
+    // Update invoice status to 'Sent' if currently 'Draft'
+    if (invoice.status === 'Draft') {
+      await db.query(
+        'UPDATE invoices SET status = $1, sent_date = NOW(), updated_at = NOW() WHERE id = $2',
+        ['Sent', id]
+      );
+    }
+    
+    // Log the email in email_logs table
+    await db.query(
+      'INSERT INTO email_logs (invoice_id, sent_to, subject, status) VALUES ($1, $2, $3, $4)',
+      [id, invoice.client_email, emailSubject, 'Sent']
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `Invoice sent to ${invoice.client_email}` 
+    });
+  } catch (error) {
+    console.error('Error sending invoice email:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
