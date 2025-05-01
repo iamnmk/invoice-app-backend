@@ -39,7 +39,9 @@ router.post('/', async (req, res) => {
       currency, 
       due_date, 
       status, 
-      notes 
+      notes,
+      include_payment_button = false,
+      signature_id = null // Add signature_id field with null default
     } = req.body;
     
     // Validate required fields
@@ -53,8 +55,8 @@ router.post('/', async (req, res) => {
     }
     
     const result = await db.query(
-      'INSERT INTO invoices (organization_id, invoice_number, client_name, client_email, service_id, amount_total, currency, due_date, status, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-      [organization_id, invoice_number, client_name, client_email, service_id, amount_total, currency, due_date, status, notes]
+      'INSERT INTO invoices (organization_id, invoice_number, client_name, client_email, service_id, amount_total, currency, due_date, status, notes, include_payment_button, signature_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
+      [organization_id, invoice_number, client_name, client_email, service_id, amount_total, currency, due_date, status, notes, include_payment_button, signature_id]
     );
     
     res.status(201).json(result.rows[0]);
@@ -131,7 +133,9 @@ router.put('/:id', async (req, res) => {
       currency, 
       due_date, 
       status, 
-      notes 
+      notes,
+      include_payment_button = false,
+      signature_id = null // Add signature_id field with null default
     } = req.body;
     
     // Validate amount_total if provided
@@ -140,8 +144,8 @@ router.put('/:id', async (req, res) => {
     }
     
     const result = await db.query(
-      'UPDATE invoices SET client_name = $1, client_email = $2, service_id = $3, amount_total = $4, currency = $5, due_date = $6, status = $7, notes = $8, updated_at = NOW() WHERE id = $9 RETURNING *',
-      [client_name, client_email, service_id, amount_total, currency, due_date, status, notes, id]
+      'UPDATE invoices SET client_name = $1, client_email = $2, service_id = $3, amount_total = $4, currency = $5, due_date = $6, status = $7, notes = $8, include_payment_button = $9, signature_id = $10, updated_at = NOW() WHERE id = $11 RETURNING *',
+      [client_name, client_email, service_id, amount_total, currency, due_date, status, notes, include_payment_button, signature_id, id]
     );
     
     if (result.rows.length === 0) {
