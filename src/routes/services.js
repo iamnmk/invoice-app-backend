@@ -49,8 +49,8 @@ router.post('/', async (req, res) => {
     const { 
       organization_id, 
       name, 
-      description, 
-      price 
+      description,
+      payment_link 
     } = req.body;
     
     if (!organization_id || !name) {
@@ -58,8 +58,8 @@ router.post('/', async (req, res) => {
     }
     
     const result = await db.query(
-      'INSERT INTO services (organization_id, name, description, price) VALUES ($1, $2, $3, $4) RETURNING *',
-      [organization_id, name, description || null, price || 0]
+      'INSERT INTO services (organization_id, name, description, payment_link) VALUES ($1, $2, $3, $4) RETURNING *',
+      [organization_id, name, description || null, payment_link || null]
     );
     
     res.status(201).json(result.rows[0]);
@@ -75,8 +75,8 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { 
       name, 
-      description, 
-      price 
+      description,
+      payment_link 
     } = req.body;
     
     if (!name) {
@@ -84,8 +84,8 @@ router.put('/:id', async (req, res) => {
     }
     
     const result = await db.query(
-      'UPDATE services SET name = $1, description = $2, price = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
-      [name, description || null, price || 0, id]
+      'UPDATE services SET name = $1, description = $2, payment_link = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
+      [name, description || null, payment_link || null, id]
     );
     
     if (result.rows.length === 0) {
